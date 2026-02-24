@@ -4,84 +4,33 @@
     <meta charset="utf-8">
     <title>UHF RFID Scan Viewer</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f4f7f6; }
-        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h1 { color: #2c3e50; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #ddd; }
-        th { background-color: #2c3e50; color: white; }
-        tr:hover { background-color: #f1f1f1; }
-        .status-msg { padding: 10px; color: #7f8c8d; font-style: italic; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; background-color: #f4f7f6; color: #333; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        
+        .controls { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 20px; align-items: flex-end; background: #f9f9f9; padding: 15px; border-radius: 8px; }
+        .control-group { display: flex; flex-direction: column; }
+        label { font-size: 0.85rem; font-weight: bold; margin-bottom: 5px; color: #666; }
+        select, input, button { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        
+        button { cursor: pointer; background-color: #004a99; color: white; border: none; transition: background 0.2s; }
+        button:hover { background-color: #003366; }
+        button.secondary { background-color: #6c757d; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
+        th { background-color: #f1f1f1; color: #2c3e50; position: sticky; top: 0; }
+        tr:hover { background-color: #fcfcfc; }
+        
+        .status-msg { padding: 15px; color: #7f8c8d; font-style: italic; text-align: center; }
+        .badge { background: #e8f0fe; color: #1967d2; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-family: monospace; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Recent UHF RFID Scans</h1>
-        <div id="status" class="status-msg">Initializing Geotab API...</div>
-        <table id="scanTable" style="display:none;">
-            <thead>
-                <tr>
-                    <th>Timestamp</th>
-                    <th>Device ID</th>
-                    <th>Raw Scan Data (EPC)</th>
-                </tr>
-            </thead>
-            <tbody id="scanBody"></tbody>
-        </table>
-    </div>
-
-    <script>
-        geotab.addin.rfidViewer = () => {
-            return {
-                initialize(api, state, callback) {
-                    document.getElementById('status').innerText = "Ready. Waiting for focus...";
-                    callback();
-                },
-                focus(api, state) {
-                    const statusEl = document.getElementById('status');
-                    const tableEl = document.getElementById('scanTable');
-                    const bodyEl = document.getElementById('scanBody');
-
-                    statusEl.innerText = "Fetching scans from Serial Port...";
-
-                    // This is the core change: searching for Serial Data instead of Driver IDs
-                    api.call("Get", {
-                        typeName: "StatusData",
-                        search: {
-                            diagnosticSearch: { id: "DiagnosticTextFromSerialId" },
-                            resultsLimit: 30
-                        }
-                    }, function(results) {
-                        statusEl.style.display = 'none';
-                        tableEl.style.display = 'table';
-                        bodyEl.innerHTML = "";
-
-                        if (!results || results.length === 0) {
-                            statusEl.innerText = "No scans found. Make sure the Custom Parameter is applied and a tag was swiped.";
-                            statusEl.style.display = 'block';
-                            tableEl.style.display = 'none';
-                            return;
-                        }
-
-                        results.forEach(scan => {
-                            const row = bodyEl.insertRow();
-                            // Format the date
-                            row.insertCell(0).innerText = new Date(scan.dateTime).toLocaleString();
-                            // Show which vehicle sent it
-                            row.insertCell(1).innerText = scan.device.id;
-                            // The actual RFID Hex code/EPC string
-                            row.insertCell(2).innerText = scan.data; 
-                        });
-                    }, function(error) {
-                        statusEl.innerText = "Error fetching data: " + error;
-                        console.error(error);
-                    });
-                },
-                blur(api, state) {
-                    // Logic to run when user navigates away
-                }
-            };
-        };
-    </script>
-</body>
-</html>
+        <h1>UHF RFID Asset Scans</h1>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>Vehicle</label>
+                <select id
