@@ -2,35 +2,109 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>UHF RFID Scan Viewer</title>
+    <title>UHF RFID Asset Scans</title>
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; background-color: #f4f7f6; color: #333; }
-        .container { max-width: 1000px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h1 { color: #2c3e50; margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        
-        .controls { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 20px; align-items: flex-end; background: #f9f9f9; padding: 15px; border-radius: 8px; }
-        .control-group { display: flex; flex-direction: column; }
-        label { font-size: 0.85rem; font-weight: bold; margin-bottom: 5px; color: #666; }
-        select, input, button { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-        
-        button { cursor: pointer; background-color: #004a99; color: white; border: none; transition: background 0.2s; }
-        button:hover { background-color: #003366; }
-        button.secondary { background-color: #6c757d; }
-
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; background-color: #f4f7f6; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 25px; border-radius: 12px; }
+        .controls { display: flex; gap: 10px; margin-bottom: 20px; align-items: flex-end; }
+        table { width: 100%; border-collapse: collapse; }
         th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
-        th { background-color: #f1f1f1; color: #2c3e50; position: sticky; top: 0; }
-        tr:hover { background-color: #fcfcfc; }
-        
-        .status-msg { padding: 15px; color: #7f8c8d; font-style: italic; text-align: center; }
-        .badge { background: #e8f0fe; color: #1967d2; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-family: monospace; }
+        .badge { background: #e8f0fe; color: #1967d2; padding: 4px 8px; border-radius: 4px; font-family: monospace; }
+        #status { font-style: italic; color: #666; margin-bottom: 10px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>UHF RFID Asset Scans</h1>
-        
         <div class="controls">
-            <div class="control-group">
-                <label>Vehicle</label>
-                <select id
+            <select id="deviceSelect"><option value="">All Vehicles</option></select>
+            <input type="date" id="fromDate">
+            <button id="refreshBtn" style="background:#004a99; color:white; border:none; padding:8px 15px; cursor:pointer;">Update</button>
+        </div>
+        <div id="status">Ready</div>
+        <table id="scanTable" style="display:none;">
+            <thead>
+                <tr><th>Timestamp</th><th>Vehicle</th><th>Tag ID</th></tr>
+            </thead>
+            <tbody id="scanBody"></tbody>
+        </table>
+    </div>
+
+    <script>
+        // Use a strictly scoped function to avoid eval triggers
+        geotab.addin.rfidViewer = function() {
+            var apiRef;
+            var devices = {};
+
+            // Internal function for fetching data
+            var runSearch = function() {
+                var status = document.getElementById('status');
+                var body = document.getElementById('scanBody');
+                var table = document.getElementById('scanTable');
+                var devId = document.getElementById('deviceSelect').value;
+                var dateVal = document.getElementById('fromDate').value;
+
+                status.innerText = "Searching...";
+                
+                var searchObj = { 
+                    diagnosticSearch: { id: "DiagnosticTextFromSerialId" }, 
+                    resultsLimit: 100 
+                };
+                
+                if (devId) searchObj.deviceSearch = { id: devId };
+                if (dateVal) searchObj.fromDate = new Date(dateVal).toISOString();
+
+                apiRef.call("Get", {
+                    typeName: "StatusData",
+                    search: searchObj
+                }, function(results) {
+                    status.style.display = 'none';
+                    table.style.display = 'table';
+                    body.innerHTML = "";
+
+                    if (!results || results.length === 0) {
+                        status.innerText = "No scans found in database.";
+                        status.style.display = 'block';
+                        table.style.display = 'none';
+                        return;
+                    }
+
+                    results.forEach(function(scan) {
+                        var row = body.insertRow();
+                        row.insertCell(0).innerText = new Date(scan.dateTime).toLocaleString();
+                        row.insertCell(1).innerText = devices[scan.device.id] || scan.device.id;
+                        row.insertCell(2).innerHTML = '<span class="badge">' + scan.data + '</span>';
+                    });
+                }, function(err) {
+                    status.innerText = "Error: " + err;
+                });
+            };
+
+            return {
+                initialize: function(api, state, callback) {
+                    apiRef = api;
+                    document.getElementById('fromDate').valueAsDate = new Date();
+                    
+                    api.call("Get", { typeName: "Device" }, function(result) {
+                        var select = document.getElementById('deviceSelect');
+                        result.forEach(function(d) {
+                            devices[d.id] = d.name;
+                            var opt = document.createElement('option');
+                            opt.value = d.id;
+                            opt.innerHTML = d.name;
+                            select.appendChild(opt);
+                        });
+                        callback();
+                    }, function(err) { callback(); });
+
+                    document.getElementById('refreshBtn').addEventListener('click', runSearch);
+                },
+                focus: function(api, state) {
+                    runSearch();
+                },
+                blur: function(api, state) {}
+            };
+        };
+    </script>
+</body>
+</html>
