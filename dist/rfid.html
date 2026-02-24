@@ -2,27 +2,35 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>UHF RFID Scans</title>
+    <title>Garbage Bin Tracking</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; background: #f4f7f6; }
-        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
-        .controls { margin-bottom: 20px; }
+        body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #f4f7f6; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 10px; }
+        .controls { margin-bottom: 20px; display: flex; gap: 10px; align-items: flex-end; }
         table { width: 100%; border-collapse: collapse; }
-        th, td { text-align: left; padding: 10px; border-bottom: 1px solid #ddd; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #ddd; }
+        th { background: #eee; }
+        button { cursor: pointer; background: #004a99; color: white; border: none; padding: 10px 20px; border-radius: 4px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Garbage Bin Scans</h1>
+        <h1>Garbage Bin RFID Scans</h1>
         <div class="controls">
-            <select id="deviceSelect"><option value="">All Trucks</option></select>
-            <input type="date" id="fromDate">
-            <button id="refreshBtn">Update View</button>
+            <div>
+                <label style="display:block; font-size: 12px;">Truck</label>
+                <select id="deviceSelect" style="padding:8px;"><option value="">All Trucks</option></select>
+            </div>
+            <div>
+                <label style="display:block; font-size: 12px;">Date</label>
+                <input type="date" id="fromDate" style="padding:7px;">
+            </div>
+            <button id="refreshBtn">Refresh Data</button>
         </div>
-        <div id="status">Initializing...</div>
+        <div id="status">Syncing with MyGeotab...</div>
         <table id="scanTable" style="display:none;">
             <thead>
-                <tr><th>Time</th><th>Truck</th><th>Tag ID</th></tr>
+                <tr><th>Timestamp</th><th>Truck Name</th><th>Bin Tag (EPC)</th></tr>
             </thead>
             <tbody id="scanBody"></tbody>
         </table>
