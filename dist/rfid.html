@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>RFID Scan Viewer</title>
+    <title>UHF RFID Scan Viewer</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f4f7f6; }
         .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -11,19 +11,19 @@
         th, td { text-align: left; padding: 12px; border-bottom: 1px solid #ddd; }
         th { background-color: #2c3e50; color: white; }
         tr:hover { background-color: #f1f1f1; }
-        .loading { font-style: italic; color: #7f8c8d; }
+        .status-msg { padding: 10px; color: #7f8c8d; font-style: italic; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Recent RFID Scans</h1>
-        <div id="status" class="loading">Fetching scan data...</div>
+        <h1>Recent UHF RFID Scans</h1>
+        <div id="status" class="status-msg">Initializing Geotab API...</div>
         <table id="scanTable" style="display:none;">
             <thead>
                 <tr>
                     <th>Timestamp</th>
-                    <th>Device</th>
-                    <th>RFID Tag ID</th>
+                    <th>Device ID</th>
+                    <th>Raw Scan Data (EPC)</th>
                 </tr>
             </thead>
             <tbody id="scanBody"></tbody>
@@ -31,10 +31,10 @@
     </div>
 
     <script>
-        // The global geotab object provides the API access
         geotab.addin.rfidViewer = () => {
             return {
                 initialize(api, state, callback) {
+                    document.getElementById('status').innerText = "Ready. Waiting for focus...";
                     callback();
                 },
                 focus(api, state) {
@@ -42,36 +42,43 @@
                     const tableEl = document.getElementById('scanTable');
                     const bodyEl = document.getElementById('scanBody');
 
-                    // Search for RFID status data (DiagnosticDriverIdReportedId)
+                    statusEl.innerText = "Fetching scans from Serial Port...";
+
+                    // This is the core change: searching for Serial Data instead of Driver IDs
                     api.call("Get", {
                         typeName: "StatusData",
                         search: {
-                            diagnosticSearch: { id: "DiagnosticDriverIdReportedId" },
-                            resultsLimit: 20 // Show last 20 scans
+                            diagnosticSearch: { id: "DiagnosticTextFromSerialId" },
+                            resultsLimit: 30
                         }
                     }, function(results) {
                         statusEl.style.display = 'none';
                         tableEl.style.display = 'table';
                         bodyEl.innerHTML = "";
 
-                        if (results.length === 0) {
-                            statusEl.innerText = "No scans found.";
+                        if (!results || results.length === 0) {
+                            statusEl.innerText = "No scans found. Make sure the Custom Parameter is applied and a tag was swiped.";
                             statusEl.style.display = 'block';
+                            tableEl.style.display = 'none';
                             return;
                         }
 
                         results.forEach(scan => {
                             const row = bodyEl.insertRow();
+                            // Format the date
                             row.insertCell(0).innerText = new Date(scan.dateTime).toLocaleString();
+                            // Show which vehicle sent it
                             row.insertCell(1).innerText = scan.device.id;
-                            row.insertCell(2).innerText = scan.data; // The scanned ID
+                            // The actual RFID Hex code/EPC string
+                            row.insertCell(2).innerText = scan.data; 
                         });
                     }, function(error) {
-                        statusEl.innerText = "Error: " + error;
+                        statusEl.innerText = "Error fetching data: " + error;
+                        console.error(error);
                     });
                 },
                 blur(api, state) {
-                    // Cleanup if needed
+                    // Logic to run when user navigates away
                 }
             };
         };
